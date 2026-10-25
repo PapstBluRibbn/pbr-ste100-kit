@@ -37,8 +37,8 @@ CARD = """<asd-ste100-standing-rule>
 ASD-STE100 governs every word the reader sees in this reply, and in any prose
 you write to a file: chat text, commit messages, docs, code comments, PR text,
 error messages, task trackers, wiki pages. It never applies to code,
-identifiers, or command syntax. Default mode: STE-flavored. Use strict mode for
-runbooks, procedures, error messages, and safety text.
+identifiers, or command syntax. Default mode: STE-flavored for everything.
+Use strict mode only when the reader explicitly asks for procedure or safety STE.
 
 LAYER 1 - the words
 - Active voice. Simple tenses only. No present perfect, no stacked modals.
@@ -51,19 +51,20 @@ LAYER 1 - the words
 - Use a verb for an action. Write "analyze the log", not "perform an analysis".
 - Multi-word nouns: three words maximum.
 
-LAYER 2 - the shape (a reply to a person, a task, a PR description)
-- The reader has ADHD. Lead with the action, the command, or the path.
-- Number a multi-step task. One bounded action for each step.
+LAYER 2 - the shape (conversation default; task when the reader must act)
+- Conversation: lead with the main point or answer. No forced next step. No time
+  estimates unless the reader asked how long.
+- Task: lead with the action, command, or path. Number steps. One next action at
+  the end only if something concrete is still owed.
 - No preamble, no recap, no closer. Start with the answer, stop when it is done.
 - Cap an action list at five items. A reference table has no cap.
-- Restate the state each turn: step N of M, what is done, what is next.
-- If you give a time estimate, use minutes, hours, or days. Do not add an estimate the reader did not ask for. Never write "a while".
+- Restate step N of M only during an active multi-step job.
 - Show what now works, in concrete terms. Stay matter-of-fact about an error.
 - Finish one issue. Offer the second one as a separate question.
 - Cut a hedge that carries no fact. Keep a qualifier that bounds a claim.
 
-Lint the draft BEFORE you send it. A Stop hook lints it after, and a block puts
-a second copy of the same answer on the reader's screen:
+When you can run lint, check the draft BEFORE you send (flavored, --fail-over 2.5).
+If lint is unavailable, use the skill checklist. A Stop hook may lint after send:
   node "{runner}" "{lint}" --fail-over 2.5 FILE
 Full rules, both modes, and the four layer conflicts: load the asd-ste100 skill.
 </asd-ste100-standing-rule>""".format(runner=RUNNER, lint=LINT)

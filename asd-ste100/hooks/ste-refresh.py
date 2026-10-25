@@ -55,9 +55,10 @@ CARD = (
     "ste check-in, mid-turn: the standing rule still governs the reply you "
     "write at the end of this turn. Layer 1: active voice, simple tenses, "
     "max 20 words for an instruction, no contractions, no semicolons, keep "
-    "the articles. Layer 2: the next action first, numbered steps, no "
-    "preamble, no recap, no closer. If the reply runs over 60 words, lint "
-    "the draft first: node \"{}\" \"{}\" --fail-over 2.5 FILE"
+    "the articles. Layer 2: main point first (conversation) or action first "
+    "(task); no forced next step or time estimates; no preamble, recap, or "
+    "closer. If the reply runs over 60 words and lint is available, check the "
+    "draft: node \"{}\" \"{}\" --fail-over 2.5 FILE"
 ).format(RUNNER, LINT or "scripts/ste-lint.py")
 
 

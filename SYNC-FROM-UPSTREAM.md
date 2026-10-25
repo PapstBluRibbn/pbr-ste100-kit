@@ -8,10 +8,9 @@ git clone --depth 1 --filter=blob:none --sparse https://github.com/woosal1337/bl
 cd "$tmpdir/blog"
 git sparse-checkout set videos/ep01-the-cure-for-ai-slop
 cd -
-rsync -a --delete \
-  "$tmpdir/blog/videos/ep01-the-cure-for-ai-slop/asd-ste100/" ./asd-ste100/ \
-  "$tmpdir/blog/videos/ep01-the-cure-for-ai-slop/experiment/" ./experiment/ \
-  "$tmpdir/blog/videos/ep01-the-cure-for-ai-slop/README.md" ./README.md
+rsync -a --delete "$tmpdir/blog/videos/ep01-the-cure-for-ai-slop/asd-ste100/" ./asd-ste100/
+rsync -a --delete "$tmpdir/blog/videos/ep01-the-cure-for-ai-slop/experiment/" ./experiment/
+cp "$tmpdir/blog/videos/ep01-the-cure-for-ai-slop/README.md" ./README.md
 rm -rf "$tmpdir"
 ```
 

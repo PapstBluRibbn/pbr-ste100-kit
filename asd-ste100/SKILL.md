@@ -1,11 +1,12 @@
 ---
 name: asd-ste100
-description: ASD-STE100 Simplified Technical English, and the reply shape a reader with ADHD can act on. A standing style rule, not an on-request tool. Layer 1 governs the words of every text a human reads — chat replies, docs, READMEs, commit messages, PR text, code comments, error messages, release notes, tool descriptions, task trackers, wiki pages. Layer 2 governs the order of a reply to a person — the next action first, numbered steps, no preamble and no closer. Neither layer touches code, identifiers, or command syntax. Load it before you write prose, and also when asked to remove "AI slop", make writing clear or plain, enforce a controlled style, or review text for STE violations. Two word modes — strict (procedures, runbooks, safety text, error messages) and STE-flavored (general prose, the default).
+description: ASD-STE100 Simplified Technical English (STE-flavored by default) and a reply shape tuned for clear conversation and focused tasks. Layer 1 governs words in every text a human reads. Layer 2 governs reply order — main point first, no slop openers or closers; task steps only when the reader must act. No forced time estimates or mandatory "next step" endings in conversation. Lint when the environment can run ste-lint.py; otherwise use the manual checklist. Neither layer touches code, identifiers, or command syntax.
 license: MIT (see LICENSE; the ASD-STE100 specification itself is not covered)
 metadata:
-  version: "2.0.5"
+  version: "2.1-fork"
   spec: ASD-STE100 Issue 9 (January 2025)
   replaces: i-have-adhd
+  fork: conversation-first; STE-flavored default; optional lint
 ---
 
 # asd-ste100 2.0
@@ -13,9 +14,13 @@ metadata:
 Two layers. Both are always on.
 
 - **Layer 1 — words.** ASD-STE100 Simplified Technical English. It sets which words go in a sentence, and how long the sentence gets to be.
-- **Layer 2 — shape.** It sets the order of a reply to a person. The reader has ADHD.
+- **Layer 2 — shape.** It sets the order of a reply to a person: direct, scannable, no slop framing.
 
 Layer 1 makes a sentence readable. Layer 2 makes a reply usable. The two failures are different. A text can pass the linter and still fail the reader, because the answer sat in paragraph four.
+
+**Default word mode:** STE-flavored for all replies and prose you write. Use strict mode only when the reader explicitly asks for certified-style procedures, runbooks, or safety text — not for ordinary chat.
+
+**Default reply mode:** conversation. Use task shape only when the reader must execute steps or you are mid-way through a bounded multi-step job.
 
 Version 2.0 holds what the separate `i-have-adhd` skill held. That skill is gone. Do not look for it.
 
@@ -26,7 +31,7 @@ Version 2.0 holds what the separate `i-have-adhd` skill held. That skill is gone
 | Chat reply to a person | yes | yes |
 | Task, issue, PR description, commit message | yes | yes |
 | README, reference doc, release note, tool description | yes | no |
-| Error message, runbook, safety text | yes, strict | no |
+| Error message, runbook, safety text | yes, flavored (strict only if the reader asks) | no |
 | Blog post, essay, video script, marketing copy | no | no |
 | Code, identifiers, command syntax, log output | no | no |
 
@@ -78,28 +83,38 @@ STRUCTURE
 - **strict** — procedures, runbooks, safety text, error messages: apply every rule and both length caps, plus the strict word set: but (not however), because (not since, for causes), can (not may), must (not should/shall), use or with (not using), obey (not follow, for instructions), push (not press, for physical controls). The spec's own list of the 39 most frequent writer errors is in [ste-recurring-errors.md](references/ste-recurring-errors.md).
 - **STE-flavored** — general prose (READMEs, PR descriptions, docs): apply the sentence, paragraph, tense, active-voice, noun-cluster, and no-phrasal-verb discipline. Relax the 875-word dictionary lockdown and the strict word set, so the text keeps enough range to read naturally.
 
-Flavored is the default.
+Flavored is the default for everything in this fork, including chat. Strict is opt-in per request or per document type the reader names.
 
 ---
 
 # Layer 2 — the shape
 
-Five facts about the reader drive every rule here:
+Four facts about the reader drive every rule here:
 
 1. Working memory is small. Anything off the screen is gone. Never write "keep in mind X".
-2. Knowing the answer is not doing the answer. Work dies between "got it" and "done it".
-3. Starting is the hardest step. The first action must be obvious, small, and doable now.
-4. Time estimates feel uniform. "A bit of work" and "a few hours" land the same. A vague estimate fails.
-5. Dopamine is scarce. Visible progress counts. A buried win does not register.
+2. Knowing the answer is not doing the answer. Work dies between "got it" and "done it" — but not every message is work.
+3. Starting is the hardest step. When there *is* a task, the first action must be obvious, small, and doable now.
+4. Dopamine is scarce. Visible progress counts. A buried win does not register.
+
+## Conversation vs task
+
+| | Conversation (default) | Task |
+|---|---|---|
+| First line | Main point, direct answer, or conclusion | First action, command, path, or snippet |
+| Numbered steps | Only if listing ideas; not a fake "plan" | One bounded action per step |
+| Closing | Stop when the thought is complete. No forced "next step" | One open action only if something concrete is still owed |
+| Time | No minutes, hours, days, or "about X time" unless the reader asked how long | Same — never invent a schedule |
+| State ("step N of M") | Skip unless a multi-step job is already in progress | Restate each turn while that job runs |
 
 ## Order — what goes where
 
-**Lead with the next action.** The first line is something the reader can do. Not context, not a plan, not a restatement of the question.
+**Lead with the main point.** The first line is the answer, conclusion, or key fact — not throat-clearing and not a restatement of the question.
 
 > Bad: "Let us think about this. Your auth flow has a few moving pieces..."
-> Good: "Run `npm install jsonwebtoken`, then edit `src/auth.ts:42`."
+> Good (conversation): "The 401 comes from a missing auth header on the test client."
+> Good (task): "Run `npm install jsonwebtoken`, then edit `src/auth.ts:42`."
 
-A command, a path, or a snippet goes first. Prose comes after, if at all.
+In task mode, a command, a path, or a snippet may go first. In conversation mode, the direct answer may go first even when there is no command to run.
 
 **Number a multi-step task.** Each step is one bounded action. No step holds "and then" two times.
 
@@ -112,10 +127,11 @@ A command, a path, or a snippet goes first. Prose comes after, if at all.
 > 3. Run `npm test -- auth.spec.ts`
 > ```
 
-**End with one action.** If anything stays open, name ONE thing the reader can do in under two minutes. "Open the file" counts.
+**End with one action (task replies only).** If the reader still owes a concrete step in an ongoing task, name ONE thing they can do next. Do not add a "next step" when you are only explaining, exploring, or comparing ideas.
 
 > Bad: "Hope that helps. Tell me if you want to go deeper."
-> Good: "Next: run `npm test` and paste the first failing line."
+> Good (task): "Next: run `npm test` and paste the first failing line."
+> Good (conversation): Stop after the explanation. No artificial call to action.
 
 ## Weight — what to cut
 
@@ -132,17 +148,12 @@ Start with the answer. Stop when the answer is done.
 
 ## State — what the reader cannot hold
 
-**Restate the state every turn.** The reader cannot carry "we are on step 3 of 5" between messages.
+**Restate the state when a multi-step task is active.** The reader cannot carry "we are on step 3 of 5" between messages. Skip step counters in pure conversation.
 
 > Bad: "Done. Ready for the next part?"
 > Good: "Step 3 of 5 done: the schema is updated. Next: backfill the new column. Do I run the script?"
 
-**If you give a time estimate, use concrete units.**
-
-Do not add an estimate the reader did not ask for. Never write "a while".
-
-> Bad: "This needs some work."
-> Good: "About 15 minutes if the tests already cover this. An afternoon if not."
+**No time estimates unless asked.** Do not state how long something takes in minutes, hours, days, or vague durations ("a while", "some work", "pretty quick"). If the reader asks how long, answer in plain terms they requested — still without padding the rest of the reply with estimates.
 
 **Show what now works, in concrete terms.** Do not bury the win in a recap.
 
@@ -156,8 +167,9 @@ Do not add an estimate the reader did not ask for. Never write "a while".
 
 ## When to break Layer 2
 
-Override the defaults in four cases:
+Override the defaults in five cases:
 
+0. **Conversation.** Explain, compare, or think out loud. Use conversation mode: no command-first line, no mandatory next step, no time estimates.
 1. The reader asks you to explain or to walk through something. Explain in full. Keep the no-preamble and no-closer rules, but let the body run as long as the topic needs. Add headers, so the reader can skim back.
 2. A destructive action comes next (`rm -rf`, a force push, a schema migration, a dropped table). Confirm before you act. Safety beats brevity.
 3. A debug spiral. If the last three turns are "still broken", stop editing code. Name the assumption that could be wrong. Ask one diagnostic question.
@@ -171,7 +183,7 @@ Four real conflicts, and the ruling for each.
 
 1. **The article and the label.** Rule 4.5 wants an article before a noun. Layer 2 wants a terse label. Ruling: a sentence keeps its articles. A list item that is a label keeps its short form. Never expand a label into a sentence only to add an article.
 2. **The five-item cap and the review table.** Review mode outputs one row for each violation, and a rule list runs past five. Ruling: the cap covers an action list only. A reference table, a rule list, and a file listing have no cap.
-3. **The connector and the command-first rule.** Rule 4.4 wants plain connectors between related sentences. Layer 2 wants the command on line one. Ruling: the command goes first, then the connected prose follows it.
+3. **The connector and the answer-first rule.** Rule 4.4 wants plain connectors between related sentences. Layer 2 wants the main point on line one. Ruling: the answer or command goes first, then the connected prose follows it.
 4. **The hedge and the qualifier.** Layer 2 cuts a hedging adverb. Layer 1 guards every fact. Ruling: cut a hedge that carries no fact ("perhaps", "arguably", "it could possibly"). Keep a qualifier that bounds a claim ("on macOS only", "measured one time", "n=6"). A cut qualifier turns a bounded claim into an overclaim.
 
 ---
@@ -184,18 +196,25 @@ An installed gate lints the reply after the model sends it. A block then makes t
 
 Before a final reply of more than 60 words, and before you write prose to a file:
 
+**When you can run commands** (required in this fork — drift check):
+
 1. Write the draft to a scratch file.
-2. Run `node hooks/run-python.cjs scripts/ste-lint.py --fail-over 2.5 draft.md` from the skill directory.
+2. Run `node hooks/run-python.cjs scripts/ste-lint.py --fail-over 2.5 draft.md` from the skill directory. Use flavored mode only unless the reader asked for strict STE on this piece.
 3. Fix the reported categories. Lint one more time. Two passes, no more.
 4. Send the reply one time.
 
+**When you cannot run commands** (many web bots, phone assistants, read-only agents):
+
+1. Run the manual checklist below on the draft.
+2. Send the reply. Do not refuse or stall solely because lint is unavailable.
+
 ```
 node hooks/run-python.cjs scripts/ste-lint.py draft.md            # flavored target: under 2.5 per 100 words
-node hooks/run-python.cjs scripts/ste-lint.py --strict draft.md   # strict target: under 1.5 per 100 words
+node hooks/run-python.cjs scripts/ste-lint.py --strict draft.md   # strict: only when the reader asked for it
 node hooks/run-python.cjs scripts/ste-lint.py --shape draft.md    # add the Layer 2 counts
 ```
 
-Report the final score with the text. Do not present text as clean without a lint run.
+When lint ran, you may report the final score with the text. When it did not run, say nothing about a score.
 
 If the gate blocks you anyway, send the corrected reply and nothing else. Add no apology, no note about the gate, and no summary of what changed. Keep every fact from the first draft.
 
@@ -220,15 +239,15 @@ Layer 1:
 
 Layer 2:
 
-1. Does the first line hold an action, a command, or a path? If not, move one there.
+1. Does the first line state the main point (conversation) or the first action (task)? If throat-clearing came first, delete it.
 2. Does the first sentence announce what you are about to do? Delete it.
 3. Does the last sentence ask "anything else?" or recap the work? Delete it.
 4. Is there a "by the way" sidebar? Move it to a separate question.
-5. If an estimate is present, is it vague ("some work", "a while")? Use minutes, hours, or days. Do not add an estimate the reader did not ask for.
+5. Did you add any time estimate the reader did not ask for? Remove it. Remove vague durations ("a while", "some work").
 6. Does an action list run past five items? Split it into "do now" and "later".
-7. Is the state of multi-turn work restated? Add "step N of M".
+7. Is a multi-step task in progress but state missing? Add "step N of M". If there is no active task, skip this.
 
-Then read the first line and the last line alone. Do they tell the reader what to do next, and what just happened? If yes, send.
+Then read the first line and the last line alone. In conversation, they should frame the idea — not invent a chore. In a task reply, they should show what is next only if something is still owed.
 
 ---
 
