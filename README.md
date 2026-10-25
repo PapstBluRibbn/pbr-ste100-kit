@@ -1,0 +1,167 @@
+# The cure for AI slop is a 1986 aircraft manual - the kit
+
+Everything the episode promises "in the description": the agent skill, the
+linter, and the full first-party test data. Nothing here needs more than
+Python 3.
+
+The kit has two parts. `asd-ste100/` is the thing you install. `experiment/`
+is the evidence that it works.
+
+```
+asd-ste100/     the agent skill - one installer arms every layer
+  SKILL.md                  the skill itself, version 2.0, two layers
+  README.md                 the skill's own front page, as published
+  LICENSE                   MIT for the kit, the spec stays ASD's
+  scripts/ste-lint.py       the heuristic anti-slop linter
+  references/ste-recurring-errors.md   the 39 most frequent writer errors
+  hooks/hooks.json          the plugin's hook declarations, self-registering
+  hooks/run-python.cjs      selects a Python 3 command on each operating system
+  install.py                wires the skill, the style, and the four hooks
+  output-style.md           the condensed rule as a Claude Code output style
+  hooks/ste-inject.py       the rule card in context, every turn
+  hooks/ste-refresh.py      a short card every 12 tool calls, mid-turn
+  hooks/ste-pregate.py      lints a commit message before the command runs
+  hooks/ste-gate.py         lints the finished reply, three bands
+
+experiment/      the claim test - 6 writing tasks x 4 conditions, 2 models
+  results-cross-model.md    the headline numbers, and what did not hold
+  results-openai.md         per-category detail for the gpt-5.5 run
+  before-after-samples.md   the real outputs quoted in the episode
+  run-openai.py             the script that produced the OpenAI side
+```
+
+## The skill
+
+`asd-ste100/` is a complete skill directory. Version 2.0 has two layers.
+
+**Layer 1 is the words.** `SKILL.md` holds the distilled ASD-STE100 rules in
+two modes: strict for procedures, error messages and safety text, and flavored
+for general prose. `references/ste-recurring-errors.md` is the spec's own list of the 39
+words writers reach for on autopilot, with the approved replacement for each.
+
+**Layer 2 is the shape.** STE fixes a sentence. It does nothing about the
+answer that sat in paragraph four. Layer 2 sets the order of a reply to a
+person: the next action first, numbered steps, real time estimates, no preamble
+and no closer. It came from a separate skill for an ADHD reader, and 2.0 merged
+it in. Layer 1 applies to every text a human reads. Layer 2 applies to a reply,
+a task, or a PR description - not to a reference doc, and not to writing that
+needs a voice.
+
+Any agent the [skills CLI](https://skills.sh) supports, one command:
+
+```
+bunx skills add woosal1337/blog
+```
+
+The listing behind that command is
+[skills.sh/woosal1337/blog/asd-ste100](https://www.skills.sh/woosal1337/blog/asd-ste100).
+
+The command reads this repo itself. The CLI finds the skill in this folder,
+so there is no mirror and no second repo to keep in sync.
+
+Claude Code, with the full enforcement stack:
+
+```
+node asd-ste100/hooks/run-python.cjs asd-ste100/install.py
+```
+
+The installer symlinks the skill and the output style, adds the four hook
+entries to `~/.claude/settings.json`, and backs the old file up first. It is
+idempotent, a second run repairs the install, and `--uninstall` removes
+exactly what it added. If you only want the skill, the old way still works:
+
+```
+ln -s "$PWD/asd-ste100" ~/.claude/skills/asd-ste100
+```
+
+Any other agent: paste `asd-ste100/SKILL.md` into the system prompt or the
+custom instructions. The skill works without the linter. The linter closes the
+loop.
+
+## The linter
+
+```
+node asd-ste100/hooks/run-python.cjs asd-ste100/scripts/ste-lint.py your-draft.md            # flavored: general prose
+node asd-ste100/hooks/run-python.cjs asd-ste100/scripts/ste-lint.py --strict your-draft.md   # strict: adds the STE word set, counts em dashes
+node asd-ste100/hooks/run-python.cjs asd-ste100/scripts/ste-lint.py --shape your-draft.md    # add the Layer 2 counts
+```
+
+Score is violations per 100 words - lower is cleaner. Lint a draft, apply the
+skill, then lint it again. The delta between the two scores is the signal.
+Useful flags: `--json` for machine-readable output, `--fail-over N` to exit 1
+when the score is over N (CI gates, pre-commit hooks).
+
+The linter reports `score_version: 2`. Version 2 catches perfect tenses and
+modal stacks, no longer counts adjectival participles ("the valve is closed")
+as passive, and moves "provide" to the banned list. The headline numbers below
+were measured with score v1 - this file's git history at the episode date. The
+two versions score close but are not directly comparable.
+
+Skill 2.0 added the Layer 2 counts under `shape`, with `shape_version: 1`. They
+stay out of `total`, so `total_per100w` still means what it meant, and the
+numbers below still compare.
+
+## The enforcement layers
+
+A skill is advisory. The model can forget it, and on a long turn it does. The
+installer therefore arms every deterministic layer the harness offers, from
+the system prompt down to a hard gate:
+
+| Layer | Mechanism | When it fires | What it guarantees |
+|---|---|---|---|
+| style | `output-style.md` | every request | the rule sits in the system prompt itself |
+| card | `ste-inject.py` | every user turn | the rule enters context, and the last score comes back |
+| refresh | `ste-refresh.py` | every 12 tool calls | the rule stays near the reply on a long turn |
+| pre-send | `ste-pregate.py` | before a commit or board write | bad prose never lands anywhere |
+| file check | `ste-refresh.py` | after a Write of an md file | a written doc gets its score in the same turn |
+| gate | `ste-gate.py` | when the reply ends | every finished reply is linted, three bands |
+
+The pre-send gate is the strongest layer, and it is worth understanding why.
+It runs BEFORE the tool call, so a deny costs nothing on screen. The model
+reads the lint report, fixes the text, and makes the same call again. The
+reader sees one clean commit. Prose that goes through a tool call can be made
+fully deterministic this way. The reply itself cannot, which is what the Stop
+gate is for.
+
+`ste-gate.py` lints the reply after the model sends it. Here is the part that
+took a second version to get right. The reply is already on the reader's screen
+when the hook runs, so a block does not retract it. The model sends a corrected
+reply below the first one, and the reader gets the same answer two times. Gate
+v1 blocked at the target, so a reply that scored 2.54 against a limit of 2.50
+cost a full duplicate.
+
+Gate v2 keeps three bands:
+
+| Score | What happens |
+|---|---|
+| under 2.5 | nothing |
+| 2.5 to 4.0 | a warning goes to a session file. The inject hook shows it on the next turn. No second reply. |
+| over 4.0 | one block, one time for that turn. A lock file holds the turn number, so a retry cannot stack a third copy. |
+
+The real fix is in the skill, not the hook: lint the draft before you send it,
+and the gate never fires.
+
+## The experiment
+
+Six realistic engineer-writing tasks, four conditions each, on two model
+families. Read `experiment/results-cross-model.md` first: it carries the
+headline table, the caveats, and the one result that did not survive the second
+model. `run-openai.py` needs `prompts.json` and the four condition prompts,
+which were not published.
+
+| Condition | Claude sonnet | gpt-5.5 |
+|---|---|---|
+| baseline | 4.36 | 3.54 |
+| banned-words list | 4.21 (-3%) | 2.14 (-40%) |
+| Orwell's 6 rules | 2.48 (-43%) | 1.69 (-52%) |
+| STE skill | 1.12 (-74%) | 1.76 (-50%) |
+
+Give the model a writing system and slop drops by half or more, on every model
+tested. STE was best or tied-best. A banned-words list is the least reliable fix.
+
+Not a certified STE checker. The judgment rules of ASD-STE100 need a human;
+this covers the mechanical subset - which is where the slop lives. Unofficial
+and not affiliated with ASD. ASD-STE100 is a registered EU trademark
+(No. 017966390).
+
+Spec: ASD-STE100 Issue 9, free at asd-ste100.org
